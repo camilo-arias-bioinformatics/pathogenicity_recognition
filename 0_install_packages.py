@@ -6,3 +6,4 @@ pip install prody
 pip install gemmi
 
 "packages for MD"
+pip install obabel
