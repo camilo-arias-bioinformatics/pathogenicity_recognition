@@ -1,0 +1,178 @@
+Downloaded PRF1
+Downloaded PTPN11
+Downloaded MYH7
+Downloaded NDUFB11
+No sequence found for MT-TS1
+No sequence found for LOC130001862
+Downloaded TRIM63
+Downloaded ALPK3
+Downloaded SCN5A
+Downloaded ETFA
+Downloaded HSD17B10
+Downloaded COX15
+Downloaded NAA10
+No sequence found for MT-ND4
+Downloaded GJD2-DT
+No sequence found for MT-TQ
+Downloaded KCNH2
+No sequence found for MT-TS2
+Downloaded SUCLG1
+Downloaded PYGL
+No sequence found for LOC112469007
+Downloaded TTR
+Downloaded PMPCA
+No sequence found for MT-ATP8
+No sequence found for LOC126805765
+Downloaded SHOC2
+Downloaded HCCS
+Downloaded TMEM70
+No sequence found for LOC126861897
+Downloaded AGK
+Downloaded CBL
+Downloaded SLC25A4
+No sequence found for MT-TC
+Downloaded MYBPC3
+Downloaded TTN-AS1
+Downloaded MMACHC
+Downloaded HRAS
+Downloaded PIK3CA
+Downloaded PRKAG2
+Downloaded RPL36A-HNRNPH2
+Downloaded COX10
+No sequence found for MT-TR
+No sequence found for MT-TM
+Downloaded LRRC56
+Downloaded AGPAT2
+Downloaded NDUFA13
+No sequence found for MT-TH
+No sequence found for LOC126861898
+Downloaded ETFB
+Downloaded MYO6
+Downloaded MTO1
+Downloaded NDUFA2
+Downloaded COX7B
+No sequence found for MT-TY
+Downloaded PKP2
+Downloaded NNT
+Downloaded NRAS
+Downloaded SLC25A3
+Downloaded COQ7
+No sequence found for MT-CO1
+Downloaded CLN3
+Downloaded MYH6
+No sequence found for LOC106029312
+Downloaded JPH2
+Downloaded BRAF
+No sequence found for MT-ND4L
+No sequence found for MT-ATP6
+Downloaded MMAB
+Downloaded PPP1CB
+Downloaded FXN
+Downloaded HADHB
+Downloaded GJB2
+Downloaded TPM1
+Downloaded SSUH2
+Downloaded FHL1
+No sequence found for MT-TI
+Downloaded BSCL2
+Downloaded CAV3
+No sequence found for LOC130060113
+Downloaded NDUFS8
+Downloaded GLA
+Downloaded NEXN
+Downloaded MAP2K2
+Downloaded MCEE
+Downloaded FASTKD2
+Downloaded TAFAZZIN
+Downloaded TNNC1
+Downloaded SLC22A5
+No sequence found for LOC130002704
+Downloaded HFE
+No sequence found for LOC126805877
+Downloaded AARS2
+Downloaded LAMP2
+Downloaded NDUFAF1
+Downloaded RRAS2
+Downloaded SDHD
+Downloaded MVK
+Downloaded DLG4
+Downloaded NCAPH2
+Downloaded MMUT
+Downloaded RIT1
+Downloaded MYH7B
+No sequence found for MT-TA
+Downloaded OPA1
+Downloaded MYPN
+Downloaded DNASE1L1
+Downloaded PPP1R21
+Downloaded GTPBP3
+No sequence found for MT-ND5
+No sequence found for MT-TG
+Downloaded HNRNPUL2-BSCL2
+Downloaded KLHL24
+Downloaded MYL2
+Downloaded TULP3
+Downloaded MMAA
+No sequence found for MT-TN
+Downloaded FLNC-AS1
+Downloaded TMEM43
+Downloaded COQ9
+Downloaded COQ4
+Downloaded LZTR1
+No sequence found for LOC130008523
+Downloaded NCF1
+Downloaded KRAS
+Downloaded SOS1
+Downloaded SOS2
+Downloaded LMNA
+Downloaded TCAP
+Downloaded CAVIN1
+Downloaded FLAD1
+Downloaded ACTN2
+No sequence found for LOC112552175
+Downloaded CRYAB
+No sequence found for LOC125371495
+Downloaded IDUA
+Downloaded MAPK1
+Downloaded MYO18B
+Downloaded FOXRED1
+Downloaded ELAC2
+Downloaded TNNT2
+Downloaded CACNA1C
+No sequence found for MT-ND2
+Downloaded RAF1
+Downloaded CCDC40
+Downloaded SPRED2
+No sequence found for MT-TD
+Downloaded SLC25A20
+Downloaded TMCO6
+Downloaded ETFDH
+No sequence found for MT-ND3
+Downloaded TINF2
+Downloaded MMADHC
+Downloaded CAV1
+Downloaded GAA
+Downloaded SCO2
+Downloaded TNNI3
+Downloaded MT-CO2
+Downloaded FNIP1
+Downloaded NDUFA11
+Downloaded CSRP3
+Downloaded ACTC1
+Downloaded FLNC
+No sequence found for MT-CO3
+No sequence found for LOC126806913
+No sequence found for LOC130005368
+No sequence found for MT-TW
+Downloaded TTN
+No sequence found for LOC126806484
+Downloaded NDUFS2
+Downloaded MAP2K1
+Downloaded BAG3
+No sequence found for MT-TL1
+Downloaded MHRT
+Downloaded ACADVL
+Downloaded MT-TK
+No sequence found for MT-ND1
+Downloaded FBXL4
+Downloaded DES
