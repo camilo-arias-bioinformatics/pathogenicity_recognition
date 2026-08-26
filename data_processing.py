@@ -2,35 +2,61 @@
 import pandas as pd
 from Bio import SeqIO
 
-# %% Exploración inicial de la tabla de datos
+# %% Initial data exploration
+# in: Data table
+# out: column names and data types
 data = pd.read_csv("data/raw/clinvar_result.txt", sep="\t")
 
 for col in data.columns:
     print(f"\n{col}")
     print(data[col].unique())
 
-# %% Generar tabla con registros patogénicos y por variación de un único nucleótido
-data_sorted = data[data["Germline classification"] == "Pathogenic"]
-data_sorted = data_sorted[data_sorted["Variant type"] == "single nucleotide variant"]
-print(data_sorted.info())
+# %% Filter for germline classification and variant type
+# in: data table
+# out: data_filtered_pathogenic and data_filtered_benign
+def filter_data(germline_classification):
+    data_filtered = data[data["Germline classification"] == germline_classification]
+    data_filtered = data_filtered[data_filtered["Variant type"] == "single nucleotide variant"]
+    return(data_filtered)
 
-# %% Eliminar registros con los que no se pueda trabajar
-data_sorted[data_sorted["Gene(s)"].isna()]
-data_sorted = data_sorted.dropna(subset=["Gene(s)"]).reset_index(drop=True)
+data_filtered_pathogenic = filter_data("Pathogenic")
+data_filtered_benign = filter_data("Benign")
+print(data_filtered_pathogenic.info())
+print(data_filtered_benign.info())
 
-# %% Exportar la tabla generada como un archivo csv
-data_sorted.to_csv("data/processed/hcm_pathogenic_and_snp.csv", index=False)
+# %% Check for na values
+# in: data_filtered_pathogenic
+# out: na details
+print(data_filtered_pathogenic[data_filtered_pathogenic["Gene(s)"].isna()])
 
-# %% Conservar registros únicos para genes desde el nombre de la mutación
-genes = []
+# %% manage na values
+# in: data_filtered_pathogenic with na values
+# out: data_filtered_pathogenic without na values
+data_filtered_pathogenic = data_filtered_pathogenic.dropna(subset=["Gene(s)"]).reset_index(drop=True)
 
-for a in data_sorted["Name"]:
-    end = a.find("(")
-    genes.append(a[0:end])
+# %% Export tables as csv files
+# in: data tables in code
+# out: data tables as csv files
+def export_data_as_files(dataframe):
+    dataframe.to_csv("data/processed/hcm_pathogenic_and_snp.csv", index=False)
+export_data_as_files(data_filtered_pathogenic)
+export_data_as_files(data_filtered_benign)
 
-genes = list(set(genes))
-print(genes)
-len(genes)
+# %% Store unique values for gene names
+# in: data_filtered_pathogenic and data_filtered_benign
+# out: unique_genes_pathogenic and unique_genes_benign (lists)
+def store_gene_names(dataset):
+    genes = []
+
+    for a in dataset["Name"]:
+        end = a.find("(")
+        genes.append(a[0:end])
+
+    genes = list(set(genes))
+    return(genes)
+unique_genes_pathogenic = store_gene_names(data_filtered_pathogenic)
+unique_genes_benign = store_gene_names(data_filtered_benign)
+print(f"len pathogenic: {len(unique_genes_pathogenic)} len benign: {len(unique_genes_benign)}")
 
 # %%Función para descargar secuencias de una lista de genes a un archivo fasta
 def buscar_secuencias(accessions):
@@ -53,7 +79,8 @@ def buscar_secuencias(accessions):
             outfile.write("\n")
 
             print(f"Downloaded {acc}")
-buscar_secuencias(genes)
+buscar_secuencias(unique_genes_pathogenic)
+buscar_secuencias(unique_names_benign)
 
 # %% Revisar el contenido del archivo fasta
 fasta_file = "results/gene_sequences.fasta"
@@ -123,12 +150,6 @@ type(int(row["location"]))
 # %%
 
 # %%
-for a in ads:
-    index = ids.index(a)
-    seq = dataset[a]
-a = 
-print(a)
-copy = dataset[a]
-for a in range(5):
-    print(copy[a, 2]) 
+import sys
+print(sys.executable)
 

@@ -1,2 +1,3 @@
 # %%
-pip install pandas numpy biopython
+import sys
+!{sys.executable} -m pip install pandas numpy biopython
