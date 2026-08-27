@@ -1,4 +1,4 @@
-# %% Importar paquetes necesarios
+# %% import necessary packages
 import pandas as pd
 from Bio import SeqIO
 
@@ -58,13 +58,17 @@ unique_genes_pathogenic = store_gene_names(data_filtered_pathogenic)
 unique_genes_benign = store_gene_names(data_filtered_benign)
 print(f"len pathogenic: {len(unique_genes_pathogenic)} len benign: {len(unique_genes_benign)}")
 
-# %%Función para descargar secuencias de una lista de genes a un archivo fasta
-def buscar_secuencias(accessions):
+# %% Download gene sequences to fasta files
+# in: unique_genes_pathogenic and unique_genes_benign (lists)
+# out: gene_sequences_pathogenic and gene_sequences_benign (fasta files)
+def sequence_search(accessions, group):
     from Bio import Entrez
 
     Entrez.email = "j.camilo.ariasospina@gmail.com"
 
-    with open("results/gene_sequences.fasta", "w") as outfile:
+    filename = f"results/gene_sequences_{group}.fasta"
+
+    with open(filename, "w") as outfile:
 
         for acc in accessions:
 
@@ -79,8 +83,8 @@ def buscar_secuencias(accessions):
             outfile.write("\n")
 
             print(f"Downloaded {acc}")
-buscar_secuencias(unique_genes_pathogenic)
-buscar_secuencias(unique_names_benign)
+sequence_search(unique_genes_pathogenic, "pathogenic")
+sequence_search(unique_names_benign, "benign")
 
 # %% Revisar el contenido del archivo fasta
 fasta_file = "results/gene_sequences.fasta"
