@@ -3,7 +3,7 @@ import pandas as pd
 from Bio import SeqIO
 
 # %% Initial data exploration
-# in: Data table
+# in: clinvar_results.txt (txt file)
 # out: column names and data types
 data = pd.read_csv("data/raw/clinvar_result.txt", sep="\t")
 
@@ -60,13 +60,17 @@ print(f"len pathogenic: {len(unique_genes_pathogenic)} len benign: {len(unique_g
 
 # %% Download gene sequences to fasta files
 # in: unique_genes_pathogenic and unique_genes_benign (lists)
-# out: gene_sequences_pathogenic and gene_sequences_benign (fasta files)
-def sequence_search(accessions, group):
+# out: gene_sequences.fasta (fasta file)
+
+sequences_list = unique_genes_pathogenic + unique_genes_benign
+sequences_list = list(set(sequences_list))
+
+def sequence_search(accessions):
     from Bio import Entrez
 
     Entrez.email = "j.camilo.ariasospina@gmail.com"
 
-    filename = f"results/gene_sequences_{group}.fasta"
+    filename = f"results/gene_sequences.fasta"
 
     with open(filename, "w") as outfile:
 
@@ -83,35 +87,41 @@ def sequence_search(accessions, group):
             outfile.write("\n")
 
             print(f"Downloaded {acc}")
-sequence_search(unique_genes_pathogenic, "pathogenic")
-sequence_search(unique_names_benign, "benign")
+sequence_search(sequences_list)
 
-# %% Revisar el contenido del archivo fasta
-fasta_file = "results/gene_sequences.fasta"
+# %% Check fasta file result
+# in: gene_sequences.fasta (fasta files)
+# out: visualization
 
-records = list(SeqIO.parse(fasta_file, "fasta"))
-
+records = list(SeqIO.parse("results/gene_sequences.fasta", "fasta"))
 print(f"Number of sequences: {len(records)}\n")
-
 for i, record in enumerate(records, start=1):
     print(f"{i:>4} | {record.id} | length = {len(record.seq)}")
 
-# %% Importar las secuencias con One Hot Encoding
+# %% Encode sequences with One Hot Encoding
+# in: gene_sequences (fasta file)
+# out: ids_ohe (list), sequences_ohe (numpy array)
 
 from one_hot_encoding import create_dataset_from_fasta
 
-ids, dataset = create_dataset_from_fasta("results/gene_sequences.fasta")
+ids_ohe, sequences_ohe = create_dataset_from_fasta("results/gene_sequences_pathogenic.fasta")
 
-# %% Crear una tabla de datos que contenga las etiquetas y secuencias
+# %% Create a dataset with labels and sequences
+# in: data_filtered_pathogenic, data_filtered_benign (datasets)
+# out: mutations_dataset (dataset)
 
 nucleotide_numbers = {"A":0, "C":1, "G":2, "T":3, "U":4}
-label = [1] * (len(data_sorted))
+label_1 = [1] * (len(data_filtered_pathogenic))
+label_2 = [0] * (len(data_filtered_benign))
+label = label_1 + label_2
 gene = []
 location = []
 mutation_from = []
 mutation_to = []
 
-for a in data_sorted["Name"]:
+data_filtered_merge = pd.concat([data_filtered_pathogenic, data_filtered_benign], ignore_index=True)
+
+for a in data_filtered_merge["Name"]:
     end = a.find("(")
     gene.append(a[0:end])
 
@@ -127,33 +137,28 @@ mutations_dataset = pd.DataFrame({"gene": gene, "location": location, "mutation_
 
 print(mutations_dataset.head())
 
-# %% 
-label = [0] * len(ids)
-dataset_list = []
-
-for a in dataset:
-    dataset_list.append(a)    
+# %% induce mutations to sequences
+# in: ids_ohe (list), sequences_ohe (numpy array), mutations_dataset (dataset)
+# out: ids_complete (list), sequences_complete (numpy array), label (list)
+label = [0] * len(ids_ohe)
+ids_complete = ids_ohe
+sequences_complete = sequences_ohe   
 
 for a in range(len(mutations_dataset)):
     row = mutations_dataset.iloc[a]
-    index = ids.index(row["gene"])
-    seq = dataset[index]
+    index = ids_ohe.index(row["gene"])
+    seq = sequences_ohe[index]
     seq[(int(row["mutation_from"])), (int(row["location"])-1)] = False
     seq[(int(row["mutation_to"])), (int(row["location"])-1)] = True
-    dataset_list.append(seq)
-    ids.append(row["gene"])
-    label.append(1)
+    label.append(row["label"])
+    ids_complete.append(row["gene"])
+    sequences_complete.append(seq)
 
-print(len(ids), lend(label), len(dataset_list))
-# %%
+print(len(label), len(ids_complete), len(sequences_complete))
+# %% Center sequences and filter size
 
-row = mutations_dataset.iloc[1]
-int(row["mutation_from"])
-type(int(row["location"]))
+# %% Run ML/DL
 
 # %%
 
-# %%
-import sys
-print(sys.executable)
 
