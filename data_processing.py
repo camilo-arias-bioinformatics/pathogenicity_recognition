@@ -27,6 +27,8 @@ data_filtered_benign = filter_data("Benign")
 print(data_filtered_pathogenic.info())
 print(data_filtered_benign.info())
 
+data_filtered_merge = pd.concat([data_filtered_pathogenic, data_filtered_benign], ignore_index=True)
+
 # %% Check for na values
 # in: data_filtered_pathogenic
 # out: na details
@@ -163,7 +165,7 @@ def sequence_search(gene_symbols, file_name, organism="Homo sapiens"):
     print(f"Failed genes: {failed}")
     return gene_positions, failed
 
-gene_positions, failed = sequence_search(sequences_list, "results/gene_sequences.fasta")
+# gene_positions, failed = sequence_search(sequences_list, "results/gene_sequences.fasta")
 
 # %% Double check failed genes and handle
 # in: failed genes manually checked
@@ -175,19 +177,43 @@ sequences_manually_verified = ["ALPK3", "SOS1", "ACADVL"]
 
 # %% Analyze fasta file results
 # in: gene_sequences.fasta (fasta file), gene_positions, data_filtered_merge (datasets)
-# out: Analysis
+# out: Registries identified for delletion: ['RIT1', 'TTN', 'TNNC1', 'FHL1']
 
-for col in gene_positions.columns:
-    print(f"\n{col}")
-    print(gene_positions[col].unique())
+chromosome_position_original_name = []
+chromosome_position_original = []
+chromosome_position_downloaded_name = gene_positions["gene"]
+chromosome_position_downloaded = gene_positions["chromosome"]
 
-# Elliminate sequences that come from 'Homo sapiens mitochondrion, complete genome'
+for position in data_filtered_merge["Name"]:
+    start = position.find("(")
+    end = position.find(")")
+    chromosome_position_original_name.append(position[start+1:end])
 
-compare_data = pd.merge(gene_positions, data_filtered_merge, on="Name", how="inner")
+for position in data_filtered_merge["Canonical SPDI"]:
+    end = str(position).find(":")
+    chromosome_position_original.append(str(position)[0:end])
+
+chromosome_position_original_dataframe = pd.DataFrame({
+    "Name": chromosome_position_original_name,
+    "Chromosome_original": chromosome_position_original
+})
+
+chromosome_position_original_dataframe = chromosome_position_original_dataframe.drop_duplicates(subset=["Name", "Chromosome_original"])
+
+chromosome_position_downloaded_dataframe = pd.DataFrame({
+    "Name": chromosome_position_downloaded_name,
+    "Chromosome_downloaded": chromosome_position_downloaded
+})
+
+chromosome_comparison = pd.merge(chromosome_position_original_dataframe, chromosome_position_downloaded_dataframe, on="Name")
+
+genes_to_delete = chromosome_comparison.loc[chromosome_comparison["Chromosome_original"] != chromosome_comparison["Chromosome_downloaded"], "Chromosome_downloaded"].tolist()
+
+print(genes_to_delete)
 
 # %% ****Elliminate inadequate sequences
-# in: 
-# out:
+# in: gene_sequences.fasta (fasta file), genes_to_delete (list)
+# out: gene_sequences_filtered.fasta
 
 
 
@@ -242,8 +268,6 @@ location = []
 mutation_from = []
 mutation_to = []
 
-data_filtered_merge = pd.concat([data_filtered_pathogenic, data_filtered_benign], ignore_index=True)
-
 for a in data_filtered_merge["Name"]:
     end = a.find("(")
     gene.append(a[0:end])
@@ -283,7 +307,5 @@ print(len(label), len(ids_complete), len(sequences_complete))
 # in: 
 # out: 
 
-# %%
-# print(gene_positions.columns)
-print(data_filtered_merge.head())
-
+# %% Pruebas
+print(gene_positions.head())
