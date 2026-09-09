@@ -177,11 +177,11 @@ def sequence_search(gene_symbols, file_name, organism="Homo sapiens"):
     print(f"Failed genes: {failed}")
     return gene_positions, failed
 
-gene_positions, failed = sequence_search(sequences_list, "results/gene_sequences.fasta")
+# gene_positions, failed = sequence_search(sequences_list, "results/gene_sequences.fasta")
 
-# gene_positions.to_csv("results/gene_positions.csv", Index=False)
+# gene_positions.to_csv("results/gene_positions.csv", index=False)
 
-# gene_positions = pd.read_csv("results/gene_positions.csv")
+gene_positions = pd.read_csv("results/gene_positions.csv")
 
 # %% Double check failed genes and handle
 # in: failed genes manually checked
@@ -346,20 +346,25 @@ print(f"sequences for benign or no mutations {label_for_training.count("0")}")
 
 # %% center sequences
 
-centered_sequences = []
-for seq in sequences_complete:
-    seq = np.array(seq)
-    total_len = seq.shape[1]
-    col_sums = seq.sum(axis=0)
-    real_len = np.max(np.nonzero(col_sums)) + 1
-    pad_total = total_len - real_len
-    pad_left = pad_total // 2
-    pad_right = pad_total - pad_left
-    new_seq = np.zeros_like(seq)
-    new_seq[:, pad_left:pad_left+real_len] = seq[:, :real_len]
-    centered_sequences.append(new_seq)
+seqs = np.asarray(sequences_complete)
+N, C, L = seqs.shape
 
-print(sequences_complete)
+col_sums = seqs.sum(axis=1)
+nonzero_mask = col_sums != 0
+real_len = L - np.argmax(nonzero_mask[:, ::-1], axis=1)
+
+pad_total = L - real_len
+pad_left = pad_total // 2
+
+out_cols = np.arange(L)
+src_cols = out_cols[None, :] - pad_left[:, None]
+valid = (src_cols >= 0) & (src_cols < L)
+src_clipped = np.clip(src_cols, 0, L - 1)
+
+centered_sequences = np.take_along_axis(seqs, src_clipped[:, None, :], axis=2)
+centered_sequences *= valid[:, None, :]
+
+print(centered_sequences.shape)
 
 # %% ****Run ML/DL
 # in: 
