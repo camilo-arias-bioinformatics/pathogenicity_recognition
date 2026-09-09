@@ -136,9 +136,21 @@ def sequence_search(gene_symbols, file_name, organism="Homo sapiens"):
                     strand=2 if strand == "minus" else 1
                 )
 
-                outfile.write(fetch.read())
-                outfile.write("\n")
+                fasta_text = fetch.read()
                 fetch.close()
+
+                # Reemplazamos la cabecera del FASTA (accession:coords) por el
+                # nombre del gen, para que al parsear con SeqIO el id/ids
+                # resultante sea el nombre del gen (ej. "RIT1") en vez de la
+                # accession (ej. "NC_000001.11:154983344-154993111").
+                fasta_lines = fasta_text.splitlines()
+                if fasta_lines and fasta_lines[0].startswith(">"):
+                    original_header = fasta_lines[0][1:]  # guardamos la info original como descripción
+                    fasta_lines[0] = f">{gene} {original_header}"
+                fasta_text = "\n".join(fasta_lines)
+
+                outfile.write(fasta_text)
+                outfile.write("\n")
 
                 records.append({
                     "gene": gene,
@@ -165,7 +177,11 @@ def sequence_search(gene_symbols, file_name, organism="Homo sapiens"):
     print(f"Failed genes: {failed}")
     return gene_positions, failed
 
-# gene_positions, failed = sequence_search(sequences_list, "results/gene_sequences.fasta")
+gene_positions, failed = sequence_search(sequences_list, "results/gene_sequences.fasta")
+
+# gene_positions.to_csv("results/gene_positions.csv", Index=False)
+
+# gene_positions = pd.read_csv("results/gene_positions.csv")
 
 # %% Double check failed genes and handle
 # in: failed genes manually checked
@@ -207,15 +223,25 @@ chromosome_position_downloaded_dataframe = pd.DataFrame({
 
 chromosome_comparison = pd.merge(chromosome_position_original_dataframe, chromosome_position_downloaded_dataframe, on="Name")
 
-genes_to_delete = chromosome_comparison.loc[chromosome_comparison["Chromosome_original"] != chromosome_comparison["Chromosome_downloaded"], "Chromosome_downloaded"].tolist()
+genes_to_delete = chromosome_comparison.loc[chromosome_comparison["Chromosome_original"] != chromosome_comparison["Chromosome_downloaded"], "Name"].tolist()
 
-print(genes_to_delete)
+print(f"Genes to delete: {genes_to_delete}")
 
-# %% ****Elliminate inadequate sequences
-# in: gene_sequences.fasta (fasta file), genes_to_delete (list)
-# out: gene_sequences_filtered.fasta
+# %% Encode sequences with One Hot Encoding
+# in: gene_sequences (fasta file)
+# out: ids_ohe (list), sequences_ohe (numpy array)
 
+from one_hot_encoding import create_dataset_from_fasta
 
+ids_ohe, sequences_ohe = create_dataset_from_fasta("results/gene_sequences.fasta")
+
+# %% Delete sequences obtained from different 
+# in: ids_ohe, genes_to_delete (lists), sequences_ohe (numpy array)
+# out: ids_ohe_filtered (list), sequences_ohe_filtered (numpy array)
+
+indices_to_delete = [ids_ohe.index(x) for x in genes_to_delete]
+ids_ohe_filtered = [x for i, x in enumerate(ids_ohe) if i not in indices_to_delete]
+sequences_ohe_filtered = np.delete(sequences_ohe, indices_to_delete, axis=0)
 
 # %% Check for outliers
 # in: gene_sequences.fasta (fasta files)
@@ -231,29 +257,24 @@ plt.tight_layout()
 plt.savefig("results/sequence_length_violin.png", dpi=300)
 plt.show()
 
-# %% Elliminate outliers
+# %% Discard outliers
 # in: gene_sequences.fasta (fasta file)
 # out: gene_sequences_filtered.fasta (fasta file)
 
-records = list(SeqIO.parse("results/gene_sequences.fasta", "fasta"))
-lengths = np.array([len(r.seq) for r in records])
+def get_q1_q4_indices(dataset):
+    lengths = np.array([np.sum(np.any(seq != 0, axis=0)) for seq in dataset])
+    q1_thresh = np.percentile(lengths, 25)
+    q4_thresh = np.percentile(lengths, 75)
+    q1_indices = np.where(lengths <= q1_thresh)[0].tolist()
+    q4_indices = np.where(lengths >= q4_thresh)[0].tolist()
+    return q1_indices, q4_indices, lengths
 
-q1 = np.percentile(lengths, 25)
-q3 = np.percentile(lengths, 75)
+q1_indices, q4_indices, lengths = get_q1_q4_indices(sequences_ohe_filtered)
 
-filtered = [r for r in records if q1 <= len(r.seq) <= q3]
+q_to_delete = q1_indices + q4_indices
 
-SeqIO.write(filtered, "results/gene_sequences_filtered.fasta", "fasta")
-
-print(f"Kept {len(filtered)} of {len(records)} sequences")
-
-# %% Encode sequences with One Hot Encoding
-# in: gene_sequences (fasta file)
-# out: ids_ohe (list), sequences_ohe (numpy array)
-
-from one_hot_encoding import create_dataset_from_fasta
-
-ids_ohe, sequences_ohe = create_dataset_from_fasta("results/gene_sequences_filtered.fasta")
+ids_ohe_filtered = [x for i, x in enumerate(ids_ohe_filtered) if i not in q_to_delete]
+sequences_ohe_filtered = np.delete(sequences_ohe_filtered, q_to_delete, axis=0)
 
 # %% Create a dataset with labels and sequences
 # in: data_filtered_pathogenic, data_filtered_benign (datasets)
@@ -268,14 +289,6 @@ location = []
 mutation_from = []
 mutation_to = []
 
-for a in data_filtered_merge["Name"]:
-    end = a.find("(")
-    gene.append(a[0:end])
-
-for a in data_filtered_merge["GRCh38Location"]
-    start = a.index(":")
-    end = a.index(a[-4])
-    location.append(a[(start+1):(end)])
 
     mutation_from.append(a[-3])
     mutation_to.append(a[-1])
@@ -308,4 +321,4 @@ print(len(label), len(ids_complete), len(sequences_complete))
 # out: 
 
 # %% Pruebas
-print(gene_positions.head())
+data_filtered_merge.head()
