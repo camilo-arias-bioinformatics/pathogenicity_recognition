@@ -277,48 +277,93 @@ ids_ohe_filtered = [x for i, x in enumerate(ids_ohe_filtered) if i not in q_to_d
 sequences_ohe_filtered = np.delete(sequences_ohe_filtered, q_to_delete, axis=0)
 
 # %% Create a dataset with labels and sequences
-# in: data_filtered_pathogenic, data_filtered_benign (datasets)
+# in: data_filtered_pathogenic, data_filtered_benign, gene_positions (datasets)
 # out: mutations_dataset (dataset)
 
+gene_only_pathogenic = []
+for name in data_filtered_pathogenic["Name"]:
+    start = name.find("(")
+    end = name.find(")")
+    gene_only_pathogenic.append(name[start+1:end])
+
+gene_only_benign = []
+for name in data_filtered_benign["Name"]:
+    start = name.find("(")
+    end = name.find(")")
+    gene_only_benign.append(name[start+1:end])
+
+
 nucleotide_numbers = {"A":0, "C":1, "G":2, "T":3, "U":4}
-label_1 = [1] * (len(data_filtered_pathogenic))
-label_2 = [0] * (len(data_filtered_benign))
-label = label_1 + label_2
-gene = []
-location = []
-mutation_from = []
-mutation_to = []
 
+def create_table_mutations_information(gene_names, dataset, label_used):
 
-    mutation_from.append(a[-3])
-    mutation_to.append(a[-1])
+    label = []
+    gene = []
+    location = []
+    mutation_from = []
+    mutation_to = []
 
-mutations_dataset = pd.DataFrame({"gene": gene, "location": location, "mutation_from": mutation_from, "mutation_to": mutation_to})
+    for gene_name in gene_names:
+        if gene_name in ids_ohe_filtered:
+            label.append(label_used)
+            gene.append(gene_name)
+            index = gene_names.index(gene_name)
+            gene_start = gene_positions.loc[gene_positions["gene"] == gene_name, "start"].iloc[0]
+            position = int(dataset["GRCh38Location"].iloc[index]) - int(gene_start)
+            location.append(position)
+            m_from = (dataset["Canonical SPDI"].iloc[index])[-3]
+            mutation_from.append(nucleotide_numbers[m_from])
+            m_to = (dataset["Canonical SPDI"].iloc[index])[-1]
+            mutation_to.append(nucleotide_numbers[m_to])
 
-print(mutations_dataset.head())
+    mutations_dataset = pd.DataFrame({"label": label, "gene": gene, "location": location, "mutation_from": mutation_from, "mutation_to": mutation_to})
 
-# %% induce mutations to sequences and center
+    return(mutations_dataset)
+
+mutations_pathogenic = create_table_mutations_information(gene_only_pathogenic, data_filtered_pathogenic, "1")
+
+mutations_benign = create_table_mutations_information(gene_only_benign, data_filtered_benign, "0")
+
+mutations_merged = pd.concat([mutations_pathogenic, mutations_benign], ignore_index=True)
+
+# %% induce mutations to sequences
 # in: ids_ohe (list), sequences_ohe (numpy array), mutations_dataset (dataset)
 # out: ids_complete (list), sequences_complete (numpy array), label (list)
-label = [0] * len(ids_ohe)
-ids_complete = ids_ohe
-sequences_complete = sequences_ohe   
+label_for_training = [0] * len(ids_ohe_filtered)
+sequences_complete = sequences_ohe_filtered.tolist()
 
-for a in range(len(mutations_dataset)):
-    row = mutations_dataset.iloc[a]
-    index = ids_ohe.index(row["gene"])
-    seq = sequences_ohe[index]
-    seq[(int(row["mutation_from"])), (int(row["location"])-1)] = False
-    seq[(int(row["mutation_to"])), (int(row["location"])-1)] = True
-    label.append(row["label"])
-    ids_complete.append(row["gene"])
+for row in mutations_merged.itertuples():
+    label_for_training.append(row.label)
+    index = ids_ohe_filtered.index(row.gene)
+    seq = sequences_ohe_filtered[index]
+    seq[int(row.mutation_from), int(row.location) - 1] = False
+    seq[int(row.mutation_to), int(row.location) - 1] = True
     sequences_complete.append(seq)
 
-print(len(label), len(ids_complete), len(sequences_complete))
+
+print(f"sequences for pathogenic mutations {label_for_training.count("1")}")
+print(f"sequences for benign or no mutations {label_for_training.count("0")}")
+
+# %% center sequences
+
+centered_sequences = []
+for seq in sequences_complete:
+    seq = np.array(seq)
+    total_len = seq.shape[1]
+    col_sums = seq.sum(axis=0)
+    real_len = np.max(np.nonzero(col_sums)) + 1
+    pad_total = total_len - real_len
+    pad_left = pad_total // 2
+    pad_right = pad_total - pad_left
+    new_seq = np.zeros_like(seq)
+    new_seq[:, pad_left:pad_left+real_len] = seq[:, :real_len]
+    centered_sequences.append(new_seq)
+
+print(sequences_complete)
 
 # %% ****Run ML/DL
 # in: 
 # out: 
 
 # %% Pruebas
-data_filtered_merge.head()
+label_for_training.count("0")
