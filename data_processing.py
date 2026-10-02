@@ -276,6 +276,9 @@ q_to_delete = q1_indices + q4_indices
 ids_ohe_filtered = [x for i, x in enumerate(ids_ohe_filtered) if i not in q_to_delete]
 sequences_ohe_filtered = np.delete(sequences_ohe_filtered, q_to_delete, axis=0)
 
+max_len = int(np.max(np.sum(np.any(sequences_ohe_filtered != 0, axis=1), axis=1)))
+sequences_ohe_filtered = sequences_ohe_filtered[:, :, :max_len]
+
 # %% Create a dataset with labels and sequences
 # in: data_filtered_pathogenic, data_filtered_benign, gene_positions (datasets)
 # out: mutations_dataset (dataset)
@@ -292,7 +295,6 @@ for name in data_filtered_benign["Name"]:
     end = name.find(")")
     gene_only_benign.append(name[start+1:end])
 
-
 nucleotide_numbers = {"A":0, "C":1, "G":2, "T":3, "U":4}
 
 def create_table_mutations_information(gene_names, dataset, label_used):
@@ -303,26 +305,25 @@ def create_table_mutations_information(gene_names, dataset, label_used):
     mutation_from = []
     mutation_to = []
 
-    for gene_name in gene_names:
+    for ind, gene_name in enumerate(gene_names):
         if gene_name in ids_ohe_filtered:
             label.append(label_used)
             gene.append(gene_name)
-            index = gene_names.index(gene_name)
             gene_start = gene_positions.loc[gene_positions["gene"] == gene_name, "start"].iloc[0]
-            position = int(dataset["GRCh38Location"].iloc[index]) - int(gene_start)
+            position = int(dataset["GRCh38Location"].iloc[ind]) - int(gene_start)
             location.append(position)
-            m_from = (dataset["Canonical SPDI"].iloc[index])[-3]
+            m_from = (dataset["Canonical SPDI"].iloc[ind])[-3]
             mutation_from.append(nucleotide_numbers[m_from])
-            m_to = (dataset["Canonical SPDI"].iloc[index])[-1]
+            m_to = (dataset["Canonical SPDI"].iloc[ind])[-1]
             mutation_to.append(nucleotide_numbers[m_to])
 
     mutations_dataset = pd.DataFrame({"label": label, "gene": gene, "location": location, "mutation_from": mutation_from, "mutation_to": mutation_to})
 
     return(mutations_dataset)
 
-mutations_pathogenic = create_table_mutations_information(gene_only_pathogenic, data_filtered_pathogenic, "1")
+mutations_pathogenic = create_table_mutations_information(gene_only_pathogenic, data_filtered_pathogenic, 1)
 
-mutations_benign = create_table_mutations_information(gene_only_benign, data_filtered_benign, "0")
+mutations_benign = create_table_mutations_information(gene_only_benign, data_filtered_benign, 0)
 
 mutations_merged = pd.concat([mutations_pathogenic, mutations_benign], ignore_index=True)
 
@@ -330,19 +331,56 @@ mutations_merged = pd.concat([mutations_pathogenic, mutations_benign], ignore_in
 # in: ids_ohe (list), sequences_ohe (numpy array), mutations_dataset (dataset)
 # out: ids_complete (list), sequences_complete (numpy array), label (list)
 label_for_training = [0] * len(ids_ohe_filtered)
-sequences_complete = sequences_ohe_filtered.tolist()
+sequences_complete = list(sequences_ohe_filtered)
+bad_mutations = []
 
 for row in mutations_merged.itertuples():
     label_for_training.append(row.label)
-    index = ids_ohe_filtered.index(row.gene)
-    seq = sequences_ohe_filtered[index]
-    seq[int(row.mutation_from), int(row.location) - 1] = False
-    seq[int(row.mutation_to), int(row.location) - 1] = True
+    ind = ids_ohe_filtered.index(row.gene)
+    seq = sequences_ohe_filtered[ind].copy()
+    seq[int(row.mutation_from), int(row.location) ] = False
+    seq[int(row.mutation_to), int(row.location) ] = True
     sequences_complete.append(seq)
 
 
-print(f"sequences for pathogenic mutations {label_for_training.count("1")}")
-print(f"sequences for benign or no mutations {label_for_training.count("0")}")
+print(f"sequences for pathogenic mutations {label_for_training.count(1)}")
+print(f"sequences for benign or no mutations {label_for_training.count(0)}")
+
+n_bad_sequences = 0
+for i, s in enumerate(sequences_complete):
+    counts = np.asarray(s).sum(axis=0)
+    if (counts > 1).any():
+        n_bad_sequences += 1
+        print(f"sequence {i}: columns with more than one True -> {np.where(counts > 1)[0].tolist()}")
+
+print(f"sequences with at least one column with more than one True: {n_bad_sequences}")
+print(f"mutations flagged in the loop: {len(bad_mutations)}")
+for b in bad_mutations:
+    print(b)
+
+# %% delete sequences with more than one 1 in any given column
+# in: sequences_complete, label for training
+# out: sequences_complete, label for training
+
+sequences_clean = []
+labels_clean = []
+removed_indices = []
+
+for i, s in enumerate(sequences_complete):
+    counts = np.asarray(s).sum(axis=0)
+    if (counts > 1).any():
+        removed_indices.append(i)
+    else:
+        sequences_clean.append(s)
+        labels_clean.append(label_for_training[i])
+
+sequences_complete = sequences_clean
+label_for_training = labels_clean
+
+print(f"sequences removed for having more than one True in a column: {len(removed_indices)}")
+print(f"sequences kept: {len(sequences_complete)}")
+print(f"sequences for pathogenic mutations after cleaning {label_for_training.count(1)}")
+print(f"sequences for benign or no mutations after cleaning {label_for_training.count(0)}")
 
 # %% center sequences
 
@@ -367,8 +405,69 @@ centered_sequences *= valid[:, None, :]
 print(centered_sequences.shape)
 
 # %% ****Run ML/DL
-# in: 
-# out: 
+# in: centered_sequences (matrix array), label_for_training
 
-# %% Pruebas
-label_for_training.count("0")
+from run_ohe_models import run_models
+
+results = run_models(
+    centered_sequences,          # (N, channels, length) one-hot
+    label_for_training,          # 0/1 labels
+    prepro=3,                    # 1=raw, 2=scaling, 3=PCA, 4=scaling+PCA
+    threads=20,
+    n_components=100,            # only used when prepro is 3 or 4
+    outdir='results_ohe'
+)
+results
+
+# %% plot
+
+def plot_precision_accuracy(df, outdir='results_ohe', sort_by='precision',
+                            title='Precision and accuracy by model (validation set)',
+                            filename='MODEL-precision_accuracy_ohe.png'):
+    import matplotlib as mpl
+    os.makedirs(outdir, exist_ok=True)
+    d = df.sort_values(sort_by, ascending=True)      # best ends up at the top
+
+    prec_color, acc_color = '#3B6FD4', '#E08A1E'
+    y = np.arange(len(d))
+    h = 0.38
+
+    plt.close('all')
+    with mpl.rc_context(mpl.rcParamsDefault):        # ignore seaborn's global style
+        fig, ax = plt.subplots(figsize=(11, 0.95*len(d) + 2.2), dpi=100)
+        fig.patch.set_facecolor('white')
+        ax.set_facecolor('white')
+
+        ax.barh(y + h/2, d['precision'], height=h, color=prec_color,
+                label='Precision (macro)', zorder=3)
+        ax.barh(y - h/2, d['accuracy'],  height=h, color=acc_color,
+                label='Accuracy', zorder=3)
+
+        for yi, (p, a) in enumerate(zip(d['precision'], d['accuracy'])):
+            ax.text(p + 0.012, yi + h/2, f'{p:.3f}', va='center', fontsize=9, color='#3d3d3d')
+            ax.text(a + 0.012, yi - h/2, f'{a:.3f}', va='center', fontsize=9, color='#3d3d3d')
+
+        ax.set_yticks(y)
+        ax.set_yticklabels(d['name'])
+        ax.set_xlim(0, 1.12)
+        ax.set_xlabel('Score')
+        ax.set_title(title, loc='left', fontsize=13, pad=14)
+        ax.xaxis.grid(True, color='#e3e3e3', linewidth=0.8, zorder=0)
+        ax.yaxis.grid(False)
+        ax.set_axisbelow(True)
+        for side in ('top', 'right', 'left'):
+            ax.spines[side].set_visible(False)
+        ax.spines['bottom'].set_color('#cfcfcf')
+        ax.tick_params(length=0)
+        ax.legend(frameon=False, loc='lower right', ncol=2)
+
+        fig.tight_layout()
+        path = os.path.join(outdir, filename)
+        fig.savefig(path, dpi=130, facecolor='white')
+        plt.show()
+
+    print('saved to', path)
+    return path
+
+
+plot_precision_accuracy(results)
